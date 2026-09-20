@@ -1,0 +1,30 @@
+{
+  "name": "voz-comunidade-api",
+  "version": "2.1.0",
+  "description": "API do Voz da Comunidade — autenticação JWT, verificação de e-mail, moderação de imagens via Cloudinary.",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "sequelize db:migrate",
+    "db:rollback": "sequelize db:migrate:undo",
+    "admin:create": "node scripts/create-admin.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^8.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.4",
+    "nodemailer": "^6.9.15",
+    "sequelize": "^6.37.5"
+  },
+  "devDependencies": {
+    "sequelize-cli": "^6.6.2"
+  }
+}
