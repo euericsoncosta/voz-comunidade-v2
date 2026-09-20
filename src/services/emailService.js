@@ -28,9 +28,29 @@ function getTransporter() {
     port,
     secure: port === 465, // 465 = SSL direto; 587 = STARTTLS
     auth: { user, pass },
+    // Sem estes limites o nodemailer espera até 2 minutos quando a porta está
+    // bloqueada, e o pedido (ex.: cadastro) fica pendurado esse tempo todo.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
   });
 
   return transporter;
+}
+
+// Loga o erro do SMTP com host:porta e, no caso mais comum em produção, explica a causa.
+function logEmailError(err) {
+  const port = Number(process.env.SMTP_PORT) || 587;
+  console.error(`[EMAIL ERROR]: ${err.message} (${process.env.SMTP_HOST}:${port})`);
+
+  const timedOut = err.code === 'ETIMEDOUT' || err.code === 'ESOCKET' || /timeout/i.test(err.message);
+  if (timedOut && [25, 465, 587].includes(port)) {
+    console.error(
+      '[EMAIL ERROR]: Timeout nas portas 25/465/587 costuma ser bloqueio de SMTP pela hospedagem — ' +
+        'o Render bloqueia essas portas nos serviços gratuitos. Use um provedor com SMTP na ' +
+        'porta 2525 (Brevo, Mailjet, SendGrid...) ou uma API HTTP de e-mail.'
+    );
+  }
 }
 
 /**
@@ -62,7 +82,7 @@ export async function sendVerificationEmail({ to, name, verifyUrl }) {
     console.log(`[EMAIL] Verificação enviada para ${to}`);
     return true;
   } catch (err) {
-    console.error('[EMAIL ERROR]:', err.message);
+    logEmailError(err);
     return false;
   }
 }
@@ -97,7 +117,7 @@ export async function sendPasswordResetEmail({ to, name, resetUrl, expiresInMinu
     console.log(`[EMAIL] Reset de senha enviado para ${to}`);
     return true;
   } catch (err) {
-    console.error('[EMAIL ERROR]:', err.message);
+    logEmailError(err);
     return false;
   }
 }

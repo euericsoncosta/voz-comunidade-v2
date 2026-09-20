@@ -119,6 +119,37 @@ URL pública do backend (ex: `https://voz-da-comunidade-api-1.onrender.com`).
 Se `SMTP_HOST/USER/PASS` estiverem vazios, o servidor **não envia**
 e-mails — só loga o link no console. Útil pra desenvolver sem SMTP.
 
+#### Hospedando no Render: o Gmail não funciona (`Connection timeout`)
+
+Serviços **gratuitos** do Render não conseguem abrir conexões de saída nas portas
+**25, 465 e 587** ([docs](https://render.com/docs/free)). O Gmail só oferece SMTP
+nessas portas, então em produção o envio falha com
+`[EMAIL ERROR]: Connection timeout` — tanto o e-mail de verificação quanto o de
+reset de senha — e o pedido responde `200` do mesmo jeito (a resposta não revela
+se o e-mail saiu). Funciona normalmente na sua máquina, o que engana.
+
+Soluções:
+
+- **Provedor com SMTP na porta 2525** (não bloqueada): Brevo, Mailjet, SendGrid e
+  Mailgun oferecem. Só troca as variáveis de ambiente no painel do Render, sem
+  mexer no código — exemplo com a Brevo (`SMTP_HOST` e login aparecem em
+  *SMTP & API* na conta; use a **chave SMTP**, não a chave de API):
+  ```env
+  SMTP_HOST=smtp-relay.brevo.com
+  SMTP_PORT=2525
+  SMTP_USER=<login SMTP>
+  SMTP_PASS=<chave SMTP>
+  SMTP_FROM="Voz da Comunidade <remetente-verificado@seu-dominio>"
+  ```
+  O remetente (`SMTP_FROM`) precisa estar verificado no provedor. Um remetente
+  `@gmail.com` costuma cair em spam por falha de autenticação do domínio (SPF/DKIM);
+  o ideal é um domínio próprio.
+- Um plano pago do Render, ou uma API HTTP de e-mail (Resend, Brevo API...), que usa
+  a porta 443.
+
+O log agora mostra o host:porta e explica esse caso, e a conexão desiste em 10 s
+(antes o padrão do nodemailer esperava 2 minutos, deixando o cadastro "pendurado").
+
 ### 4. Rodar migrations
 
 ```bash
