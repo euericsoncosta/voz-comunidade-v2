@@ -222,10 +222,20 @@ const PAGE_STYLES = `
       font-size: 10px; font-weight: 900; letter-spacing: 2px; color: #64748b; text-transform: uppercase;
     }
     input {
-      width: 100%; padding: 14px 16px; font-size: 16px;
+      width: 100%; padding: 14px 44px 14px 16px; font-size: 16px;
       border: 1px solid #e5e4d7; border-radius: 14px; background: #fff; color: #0f172a;
     }
     input:focus { outline: 2px solid #0f172a; outline-offset: 1px; }
+    .field { position: relative; }
+    .toggle {
+      position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+      width: 36px; height: 36px; margin: 0; padding: 0; border: 0; background: transparent;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .toggle svg { width: 20px; height: 20px; }
+    .toggle .icon-eye-off { display: none; }
+    .toggle.visible .icon-eye { display: none; }
+    .toggle.visible .icon-eye-off { display: block; }
     button {
       width: 100%; margin-top: 24px; padding: 16px; border: 0; border-radius: 14px;
       background: #0f172a; color: #fff; cursor: pointer;
@@ -304,9 +314,15 @@ function renderFormPage({ token, nonce }) {
       <p class="subtitle">Escolha uma senha nova para a sua conta.</p>
       <form id="form" novalidate>
         <label for="p1">Nova senha</label>
-        <input id="p1" type="password" autocomplete="new-password" minlength="${MIN_PASSWORD_LENGTH}" placeholder="Mínimo ${MIN_PASSWORD_LENGTH} caracteres" required>
+        <div class="field">
+          <input id="p1" type="password" autocomplete="new-password" minlength="${MIN_PASSWORD_LENGTH}" placeholder="Mínimo ${MIN_PASSWORD_LENGTH} caracteres" required>
+          ${eyeToggleButton('p1')}
+        </div>
         <label for="p2">Confirmar nova senha</label>
-        <input id="p2" type="password" autocomplete="new-password" placeholder="Digite novamente" required>
+        <div class="field">
+          <input id="p2" type="password" autocomplete="new-password" placeholder="Digite novamente" required>
+          ${eyeToggleButton('p2')}
+        </div>
         <div id="msg" class="msg" role="alert"></div>
         <button id="btn" type="submit">REDEFINIR SENHA</button>
       </form>
@@ -333,6 +349,16 @@ function renderFormPage({ token, nonce }) {
       function resetButton() {
         btn.disabled = false;
         btn.textContent = 'REDEFINIR SENHA';
+      }
+
+      var toggles = document.querySelectorAll('.toggle');
+      for (var i = 0; i < toggles.length; i++) {
+        toggles[i].addEventListener('click', function () {
+          var input = document.getElementById(this.getAttribute('data-target'));
+          var visible = this.classList.toggle('visible');
+          input.type = visible ? 'text' : 'password';
+          this.setAttribute('aria-label', visible ? 'Esconder senha' : 'Mostrar senha');
+        });
       }
 
       form.addEventListener('submit', function (event) {
@@ -375,6 +401,15 @@ function renderFormPage({ token, nonce }) {
   </script>
 </body>
 </html>`;
+}
+
+// Botão de mostrar/esconder senha ("olhinho"), com os dois ícones já no HTML —
+// o toggle no script só alterna a classe "visible", sem tocar no DOM.
+function eyeToggleButton(inputId) {
+  return `<button type="button" class="toggle" data-target="${inputId}" aria-label="Mostrar senha">
+            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19.5c-7 0-10.5-7-10.5-7a19 19 0 0 1 4.2-5.2M9.9 5.2A9.7 9.7 0 0 1 12 5c7 0 10.5 7 10.5 7a18.9 18.9 0 0 1-2.2 3.2M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M2 2l20 20"/></svg>
+          </button>`;
 }
 
 function escapeHtml(s) {
