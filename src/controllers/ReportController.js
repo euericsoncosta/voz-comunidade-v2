@@ -4,6 +4,12 @@ import Report from '../models/Report.js';
 import Comment from '../models/Comment.js';
 import Like from '../models/Like.js';
 import cloudinary from '../config/cloudinary.js';
+import {
+  analyzeFaces,
+  hasTooLargeFace,
+  blurFacesEnabled,
+  blurredImageUrl,
+} from '../services/faceCheck.js';
 
 /**
  * ReportController — CRUD de relatos + feed + painel admin.
@@ -132,6 +138,7 @@ class ReportController {
           const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'voz_comunidade',
             moderation: 'aws_rek',
+            faces: true, // devolve as caixas dos rostos (ver services/faceCheck.js)
           });
 
           if (result.moderation && result.moderation[0]?.status === 'rejected') {
@@ -142,7 +149,23 @@ class ReportController {
             });
           }
 
-          imageUrl = result.secure_url;
+          // Selfie / retrato: rosto grande demais na foto. Apaga a imagem do
+          // Cloudinary (não guardamos foto de rosto que foi recusada).
+          const faces = analyzeFaces(result);
+          if (hasTooLargeFace(faces)) {
+            safeUnlink(req.file.path);
+            cloudinary.uploader.destroy(result.public_id).catch(() => {});
+            return res.status(400).json({
+              status: 'error',
+              code: 'face_too_large',
+              message:
+                'Não aceitamos selfies nem fotos com pessoas em primeiro plano. Fotografe o problema no local.',
+            });
+          }
+
+          // Rostos pequenos (gente ao fundo) passam, mas desfocados.
+          imageUrl =
+            faces.count > 0 && blurFacesEnabled() ? await blurredImageUrl(result) : result.secure_url;
           safeUnlink(req.file.path);
         } catch (imgError) {
           console.error('[CLOUDINARY ERROR]:', imgError);

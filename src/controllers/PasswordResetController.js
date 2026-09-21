@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { sendPasswordResetEmail } from '../services/emailService.js';
+import { getBaseUrl } from '../config/baseUrl.js';
 
 /**
  * PasswordResetController — redefinição de senha por e-mail.
@@ -54,14 +55,12 @@ class PasswordResetController {
         user.passwordResetExpiresAt = new Date(Date.now() + ttl * 60 * 1000);
         await user.save();
 
-        const baseUrl = (process.env.APP_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
-
         // Não espera o SMTP: a resposta demora o mesmo com ou sem conta,
         // então o tempo de resposta também não denuncia e-mails cadastrados.
         sendPasswordResetEmail({
           to: user.email,
           name: user.name,
-          resetUrl: `${baseUrl}/reset-password/${token}`,
+          resetUrl: `${getBaseUrl()}/reset-password/${token}`,
           expiresInMinutes: ttl,
         }).catch((err) => console.error('[RESET EMAIL ERROR]:', err.message));
       }

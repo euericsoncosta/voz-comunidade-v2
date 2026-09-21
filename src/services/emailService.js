@@ -54,6 +54,31 @@ function logEmailError(err) {
 }
 
 /**
+ * Diagnóstico (npm run email:test): confere conexão e login do SMTP e envia um
+ * e-mail de teste com a mesma configuração usada pelos e-mails reais.
+ */
+export async function sendTestEmail(to) {
+  const tx = getTransporter();
+  if (!tx) {
+    return { ok: false, reason: 'SMTP não configurado (SMTP_HOST, SMTP_USER e SMTP_PASS precisam estar preenchidos).' };
+  }
+
+  try {
+    await tx.verify();
+    await tx.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to,
+      subject: 'Voz da Comunidade — teste de e-mail',
+      text: 'Se você recebeu esta mensagem, o envio de e-mails da API está funcionando.',
+    });
+    return { ok: true };
+  } catch (err) {
+    logEmailError(err);
+    return { ok: false, reason: err.message };
+  }
+}
+
+/**
  * Envia o email de verificação.
  * Retorna true se enviado (ou logado em modo dev), false em erro.
  */

@@ -55,6 +55,28 @@ Novas rotas públicas `POST /forgot-password`, `GET /reset-password/:token` e
   limite por IP enxergar o IP real atrás do Render.
 - `GET /usuarios` também deixa de expor os campos de reset.
 
+### Selfies bloqueadas e rostos desfocados nas fotos
+
+Além da moderação de conteúdo (`aws_rek`), o upload de foto do relato agora usa a
+detecção de rostos do Cloudinary (`faces: true`, recurso do plano básico) — ver
+`src/services/faceCheck.js`:
+
+- **Rosto grande na foto** (mais que `FACE_MAX_AREA_RATIO` da área, padrão **8%**) →
+  `POST /reports/store` responde `400` com `code: "face_too_large"` e a mensagem
+  *"Não aceitamos selfies nem fotos com pessoas em primeiro plano…"*. A imagem é apagada
+  do Cloudinary e nenhum relato é criado.
+- **Rostos pequenos** (gente ao fundo) passam, e a `imageUrl` guardada aponta para a
+  versão com os rostos **desfocados** (`e_blur_faces`). Essa versão é pré-gerada no upload
+  para a primeira visualização não esperar o Cloudinary processar (~4 s numa foto de
+  celular); o custo é ~2 s a mais no envio de fotos que têm rosto.
+- Variáveis: `FACE_MAX_AREA_RATIO` (`0` desliga a recusa) e `FACE_BLUR` (`false` desliga o desfoque).
+
+Medidas na conta real: retrato de perto 15–18% da área, duas pessoas a meia distância ~4,5%
+cada, rosto ao fundo < 1%. Limites da regra: é uma aproximação — recusa também quem
+aparece de perto ao lado do problema e deixa passar rosto de perfil, coberto ou em grupo
+com rostos pequenos. Só vale para fotos novas; relatos antigos não são reprocessados. O
+original continua no Cloudinary (a API só expõe a versão desfocada).
+
 ### Migrations novas usam `.cjs`
 
 O package é ESM (`"type": "module"`), e o `sequelize-cli` não consegue carregar
@@ -107,8 +129,14 @@ SMTP_FROM="Voz da Comunidade <seu-email@gmail.com>"
 ```
 
 **Sobre `APP_BASE_URL`:** essa URL é usada para construir os links do
-e-mail (`APP_BASE_URL/verify-email/TOKEN`). Em produção, precisa ser a
-URL pública do backend (ex: `https://voz-da-comunidade-api-1.onrender.com`).
+e-mail (`APP_BASE_URL/verify-email/TOKEN` e `APP_BASE_URL/reset-password/TOKEN`).
+Em produção, precisa ser a URL pública do backend (ex: `https://voz-comunidade-v2.onrender.com`);
+se ficar como `http://localhost:3000`, o link que chega no e-mail não abre no celular.
+
+No **Render** isso é resolvido sozinho: se `APP_BASE_URL` não existir — ou apontar para
+localhost (copiada do `.env` local) — a API usa `RENDER_EXTERNAL_URL`, que o Render define
+automaticamente, e avisa no log (`[CONFIG] APP_BASE_URL aponta para ...`). Só precisa
+definir `APP_BASE_URL` à mão se usar um domínio próprio.
 
 ### 3. Configurar o Gmail SMTP
 
@@ -146,6 +174,18 @@ Soluções:
   o ideal é um domínio próprio.
 - Um plano pago do Render, ou uma API HTTP de e-mail (Resend, Brevo API...), que usa
   a porta 443.
+
+**Testar as credenciais antes de subir:** preencha o `.env` local com os dados do
+provedor e rode
+
+```bash
+npm run email:test -- seu-email@exemplo.com
+```
+
+Ele confere a conexão e o login no SMTP e envia uma mensagem de teste (`[OK]` ou
+`[FALHOU]` com o motivo — senha errada, remetente não verificado, porta bloqueada...).
+Na sua máquina funciona mesmo com o Gmail; o teste de verdade do bloqueio só acontece
+no Render.
 
 O log agora mostra o host:porta e explica esse caso, e a conexão desiste em 10 s
 (antes o padrão do nodemailer esperava 2 minutos, deixando o cadastro "pendurado").

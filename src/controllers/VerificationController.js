@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import User from '../models/User.js';
 import { sendVerificationEmail } from '../services/emailService.js';
+import { getBaseUrl } from '../config/baseUrl.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,8 +111,7 @@ export async function dispatchVerification(user) {
   user.verificationSentAt = new Date();
   await user.save();
 
-  const baseUrl = (process.env.APP_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
-  const verifyUrl = `${baseUrl}/verify-email/${token}`;
+  const verifyUrl = `${getBaseUrl()}/verify-email/${token}`;
 
   return sendVerificationEmail({
     to: user.email,
