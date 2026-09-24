@@ -58,6 +58,13 @@ export default class User extends Model {
           allowNull: true,
           field: 'password_reset_expires_at',
         },
+        // Token do Expo Push (ExponentPushToken[...]) do último dispositivo
+        // em que o usuário fez login. Null = não recebe notificações push.
+        pushToken: {
+          type: Sequelize.STRING(255),
+          allowNull: true,
+          field: 'push_token',
+        },
       },
       {
         sequelize,

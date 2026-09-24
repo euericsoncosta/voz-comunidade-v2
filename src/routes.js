@@ -52,6 +52,7 @@ routes.post('/reports/:id/like', LikeController.toggle);
 routes.post('/reports/:reportId/comments', CommentController.store);
 routes.post('/comments/delete/:id', CommentController.delete);
 routes.post('/usuarios/update/:id', UserController.update);
+routes.post('/usuarios/push-token', UserController.registerPushToken);
 
 // ===== A PARTIR DAQUI, TUDO EXIGE role='admin' =====
 routes.use(requireAdmin);

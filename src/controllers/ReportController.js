@@ -10,6 +10,7 @@ import {
   blurFacesEnabled,
   blurredImageUrl,
 } from '../services/faceCheck.js';
+import { notifyReportResolved } from '../services/pushNotificationService.js';
 
 /**
  * ReportController — CRUD de relatos + feed + painel admin.
@@ -221,6 +222,7 @@ class ReportController {
         });
       }
 
+      const previousStatus = report.status;
       const patch = { status };
       // undefined = campo não veio no body, mantém o que já estava.
       // string (mesmo vazia) = atualiza explicitamente.
@@ -229,6 +231,13 @@ class ReportController {
       }
 
       await report.update(patch);
+
+      // Só notifica na transição pra resolvido (não a cada edição de nota
+      // num relato que já estava resolvido).
+      if (status === 'resolvido' && previousStatus !== 'resolvido') {
+        notifyReportResolved(report);
+      }
+
       return res.json({ status: 'success', data: report });
     } catch (error) {
       console.error('[API REPORT UPDATE ERROR]:', error);

@@ -15,7 +15,10 @@ class UserController {
       const users = await User.findAll({
         order: [['name', 'ASC']],
         attributes: {
-          exclude: ['password', 'verificationToken', 'passwordResetToken', 'passwordResetExpiresAt'],
+          exclude: [
+            'password', 'verificationToken', 'passwordResetToken',
+            'passwordResetExpiresAt', 'pushToken',
+          ],
         },
       });
       return res.json({ status: 'success', data: users });
@@ -132,6 +135,33 @@ class UserController {
       return res.status(500).json({
         status: 'error',
         message: 'Falha ao atualizar os dados.',
+      });
+    }
+  }
+
+  /**
+   * Salva/atualiza o token de push (Expo) do usuário logado.
+   * Chamado pelo app depois do login, uma vez que a permissão de
+   * notificação é concedida.
+   */
+  async registerPushToken(req, res) {
+    try {
+      const { pushToken } = req.body;
+      if (typeof pushToken !== 'string' || !pushToken.trim()) {
+        return res.status(400).json({ status: 'error', message: 'Token inválido.' });
+      }
+
+      await User.update(
+        { pushToken: pushToken.trim() },
+        { where: { id: req.userId } }
+      );
+
+      return res.json({ status: 'success' });
+    } catch (error) {
+      console.error('[API PUSH TOKEN ERROR]:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Falha ao salvar o token de notificação.',
       });
     }
   }
